@@ -1,13 +1,26 @@
 import os
-import operator
 from tqdm import tqdm
+import operator
+import numpy as np
 from typing import Dict, List, Optional
+import math
 
 DATA_PATH = "E:\\gitcode\\adventofcode_2022\\day11\\data.txt"
 
 
 class Monkey:
-    def __init__(self, monkey_id: int, start_items: List[int], operator: operator, operation_num: Optional[int], div_test_num: int, monk_div_true: int, monk_div_false: int, worry_decrease: bool=True):
+    def __init__(
+            self,
+            monkey_id: int,
+            start_items:List[int],
+            operator: str,
+            operation_num: Optional[int],
+            div_test_num: int,
+            monk_div_true: int,
+            monk_div_false: int,
+            worry_decrease: bool=True,
+            lcm: Optional[int]=None
+        ):
         self.id = monkey_id
         self.items = start_items
         self.operator = operator
@@ -17,6 +30,10 @@ class Monkey:
         self.monk_div_false = monk_div_false
         self.num_inspections = 0
         self.worry_decrease = worry_decrease
+        self.lcm = lcm
+        ops = ["+","*"]
+        if operator not in ops:
+            assert False, "OP NOT FOUND" + operator
 
     def process_turn(self) -> Dict[int, List[int]]:
         # Returns which monkey gets which items
@@ -25,36 +42,37 @@ class Monkey:
             self.monk_div_false: []
         }
         for i in self.items:
-            self.num_inspections += 1
             if self.operation_num is None:
-                i = self.operator(i, i)
+                if self.operator == "+":
+                    i += i
+                elif self.operator == "*":
+                    i *= i
             else:
-                i = self.operator(i, self.operation_num)
+                if self.operator == "+":
+                    i += self.operation_num
+                elif self.operator == "*":
+                    i *= self.operation_num
             if self.worry_decrease:
                 i = int(i / 3)
+            if self.lcm is not None:
+                i = operator.mod(i, self.lcm)
             if i % self.div_test_num == 0:
                 pass_to_monkeys[self.monk_div_true].append(i)
             else:
                 pass_to_monkeys[self.monk_div_false].append(i)
+        self.num_inspections += len(self.items)
         self.items = []
         return pass_to_monkeys
 
 
 class MonkeyManager:
-    def __init__(self, data: List[str], worry_decrease: bool=True):
+    def __init__(
+            self, data: List[str],
+            worry_decrease: bool=True,
+        ):
         self.worry_decrease = worry_decrease
+        self.lcm = None
         self.monkeys = self._generate_initial_monkeys(data)
-
-
-    def _get_operator(self, op_chr: str) -> operator:
-        ops = {
-            "+": operator.add,
-            "-": operator.sub,
-            "*": operator.mul,
-        }
-        if op_chr not in ops:
-            assert False, "OP NOT FOUND" + op_chr
-        return ops[op_chr]
 
 
     def _make_a_monkey(self, monkey_data):
@@ -64,7 +82,7 @@ class MonkeyManager:
         items = [int(s) for s in items_str.split(',')]
 
         op_str = monkey_data[2].replace("Operation: new = old ", "").lstrip()
-        operator = self._get_operator(op_str[0])
+        operator = op_str[0]
         op_val_str = op_str.split(" ")[1]
         if op_val_str == "old":
             operation_num = None
@@ -98,6 +116,14 @@ class MonkeyManager:
             i += 7
             if i >= len(data):
                 eol = True
+        lcm = 1
+        for m in monkeys:
+            lcm = lcm*m.div_test_num//math.gcd(lcm, m.div_test_num)
+        self.lcm = lcm
+
+        for m in monkeys:
+            m.lcm = lcm
+
         return monkeys
     
     def get_monkey_business(self) -> int:
