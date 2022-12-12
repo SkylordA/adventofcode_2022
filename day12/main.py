@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 from typing import Dict, List, Optional, Tuple
@@ -119,20 +120,20 @@ def build_map(data):
                 if abs(ord(h_right) - ord(h_curr)) <= 1:
                     heightmap.add_connection((i, j), (i + 1, j), 1)
                     heightmap.add_connection((i + 1, j), (i, j), 1)
-                elif ord(h_right) > ord(h_curr):
+                elif ord(h_right) < ord(h_curr):
                     heightmap.add_connection((i + 1, j), (i, j), 1)
-                elif ord(h_curr) > ord(h_right):
+                elif ord(h_curr) < ord(h_right):
                     heightmap.add_connection((i, j), (i + 1, j), 1)
             if h_down is not None:
                 if abs(ord(h_down) - ord(h_curr)) <= 1:
                     heightmap.add_connection((i, j), (i, j + 1), 1)
                     heightmap.add_connection((i, j + 1), (i, j), 1)
-                elif ord(h_down) > ord(h_curr):
+                elif ord(h_down) < ord(h_curr):
                     heightmap.add_connection((i, j + 1), (i, j), 1)
-                elif ord(h_curr) > ord(h_down):
+                elif ord(h_curr) < ord(h_down):
                     heightmap.add_connection((i, j), (i, j + 1), 1)
     
-    heightmap.get_grid(start_pos).distance = 0
+    heightmap.get_grid(end_pos).distance = 0
 
 
     return heightmap, start_pos, end_pos
@@ -161,22 +162,31 @@ def main():
     # plt.imshow([[ord(p) for p in r] for r in data], cmap='hot', interpolation='nearest')
     # plt.show()
 
+    # Runs algorithm in reverse to get distance from any point to the end
     heightmap, start_pos, end_pos = build_map(data)
+    run_dijkstra(heightmap, end_pos, start_pos)
 
-    run_dijkstra(heightmap, start_pos, end_pos)
-
-    path = shortest_path(heightmap, end_pos)
+    path = shortest_path(heightmap, start_pos)
     print("The shortest path:", path)
     print("Length path:", len(path) - 1)
 
+    heatmap = copy.deepcopy(data)
     for g in heightmap:
         i, j = g.grid_pos
-        data[j][i] = g.distance
+        heatmap[j][i] = g.distance
     
-    plt.imshow(data, cmap='hsv', interpolation='nearest')
+    plt.imshow(heatmap, cmap='hsv', interpolation='nearest')
     plt.show()
 
+    a_dists = []
+    for g in heightmap:
+        if data[g.grid_pos[1]][g.grid_pos[0]] == "a":
+            a_dists.append(g.distance)
+
+    print("Min a dist:", min(a_dists))
+
     import pdb; pdb.set_trace()
+
 
     return 0
 
